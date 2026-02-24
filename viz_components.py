@@ -52,7 +52,7 @@ def heatmap_single(
         )
     )
     fig.update_layout(
-        title=title,
+        title=dict(text=f"<b>{title}</b>"),
         xaxis=dict(tickangle=-45, tickfont=dict(size=10)),
         yaxis=dict(autorange="reversed"),
         margin=dict(l=120, r=40, t=50, b=120),
@@ -86,7 +86,7 @@ def heatmap_dark(
         )
     )
     fig.update_layout(
-        title=dict(text=title, font=dict(color="#fff", size=14)),
+        title=dict(text=f"<b>{title}</b>", font=dict(color="#fff", size=14)),
         xaxis=dict(
             tickangle=-45,
             tickfont=dict(size=9, color="#e0e0e0"),
@@ -114,10 +114,12 @@ def model_view_grid(
     max_heads: int = 12,
     dark: bool = True,
     height_per_row: int = 140,
+    visible_indices: Optional[List[int]] = None,
 ) -> go.Figure:
     """
     Grid of heatmaps: one small heatmap per head for the selected layer (attention.streamlit.app model view style).
     attention_stack: (num_layers, batch, num_heads, seq, seq) tensor or numpy.
+    If visible_indices is set, only those token indices are shown (e.g. to hide [CLS], [SEP], [PAD]).
     """
     if isinstance(attention_stack, torch.Tensor):
         attention_stack = attention_stack.cpu().numpy()
@@ -131,12 +133,13 @@ def model_view_grid(
         vertical_spacing=0.08,
         horizontal_spacing=0.06,
     )
-    seq_len = len(tokens)
     for i in range(heads_to_show):
         row, col = i // ncols + 1, i % ncols + 1
         attn = attention_stack[layer, 0, i]
         if hasattr(attn, "cpu"):
             attn = attn.cpu().numpy()
+        if visible_indices is not None:
+            attn = attn[np.ix_(visible_indices, visible_indices)]
         fig.add_trace(
             go.Heatmap(
                 z=attn,
@@ -150,7 +153,7 @@ def model_view_grid(
             col=col,
         )
     fig.update_layout(
-        title=dict(text=f"Layer {layer} — all heads", font=dict(size=14)),
+        title=dict(text=f"<b>Layer {layer} — all heads</b>", font=dict(size=14)),
         height=nrows * height_per_row + 80,
         template="plotly_dark" if dark else "plotly_white",
         margin=dict(l=80, r=40, t=60, b=80),
@@ -192,7 +195,7 @@ def head_view_tokens_bars(
         ]
     )
     fig.update_layout(
-        title=f"Attention from token: \"{tokens[from_token_idx]}\"",
+        title=f"<b>Attention from token: \"{tokens[from_token_idx]}\"</b>",
         xaxis_title="Token",
         yaxis_title="Attention weight",
         template="plotly_white",
